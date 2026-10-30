@@ -22,8 +22,10 @@ if (!fs.existsSync(baseFolder)) {
     fs.mkdirSync(baseFolder, { recursive: true });
 }
 
+// The dev certificate is only needed for the local HTTPS dev server. On hosts without the .NET SDK
+// (e.g. Vercel builds) generating it is impossible and unnecessary, so a failure here is non-fatal.
 if (!fs.existsSync(certFilePath) || !fs.existsSync(keyFilePath)) {
-    if (0 !== child_process.spawnSync('dotnet', [
+    const result = child_process.spawnSync('dotnet', [
         'dev-certs',
         'https',
         '--export-path',
@@ -31,8 +33,9 @@ if (!fs.existsSync(certFilePath) || !fs.existsSync(keyFilePath)) {
         '--format',
         'Pem',
         '--no-password',
-    ], { stdio: 'inherit', }).status) {
-        throw new Error("Could not create certificate.");
+    ], { stdio: 'inherit' });
+    if (result.status !== 0 || !fs.existsSync(certFilePath) || !fs.existsSync(keyFilePath)) {
+        console.warn('Could not create the ASP.NET Core dev certificate; the dev server will run over HTTP.');
     }
 }
 
@@ -81,9 +84,11 @@ export default defineConfig(({ mode }) => ({
             '^/hangfire': { target, secure: false }
         },
         port: parseInt(env.DEV_SERVER_PORT || '3000'),
-        https: {
-            key: fs.readFileSync(keyFilePath),
-            cert: fs.readFileSync(certFilePath),
-        }
+        https: (fs.existsSync(keyFilePath) && fs.existsSync(certFilePath))
+            ? {
+                key: fs.readFileSync(keyFilePath),
+                cert: fs.readFileSync(certFilePath),
+            }
+            : undefined
     }
 }))

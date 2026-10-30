@@ -132,7 +132,7 @@ export default function DashboardPage() {
   );
 }
 
-function Kpi({ label, value, icon: Icon, tone }: { label: string; value: number; icon: any; tone?: string }) {
+function Kpi({ label, value, icon: Icon, tone }: { label: string; value: number; icon: React.ComponentType<{ className?: string }>; tone?: string }) {
   return (
     <div className="rounded-xl border bg-card p-4">
       <div className="flex items-center justify-between">

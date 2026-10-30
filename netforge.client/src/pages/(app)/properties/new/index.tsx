@@ -44,7 +44,7 @@ export default function NewPropertyPage() {
     }
   };
 
-  const set = (k: keyof CreatePropertyRequest, v: any) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: keyof CreatePropertyRequest, v: CreatePropertyRequest[keyof CreatePropertyRequest]) => setForm((f) => ({ ...f, [k]: v }));
 
   return (
     <div className="mx-auto max-w-2xl grid gap-6">
