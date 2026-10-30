@@ -178,6 +178,7 @@ DocProject/Help/html
 
 # Click-Once directory
 publish/
+/publish-test/
 
 # Publish Web Output
 *.[Pp]ublish.xml
@@ -290,7 +291,6 @@ node_modules/
 .env.*
 !.env.example
 NetForge.Server/.env
-NetForge.Server/wwwroot/
 
 # Visual Studio 6 build log
 *.plg

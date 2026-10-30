@@ -52,21 +52,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Both clients have an .esproj so they show in the solution, but only React is referenced here
-         (a build-order dependency, ReferenceOutputAssembly=false). The Angular client is launched by
-         SpaProxy via SpaRoot and isn't referenced — publishing its localized build is a documented
-         follow-up (ANGULAR_PLAN.md); wiring the reference before then would break `dotnet publish`. -->
-    <ProjectReference Include="..\netforge.client\netforge.client.esproj">
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
-  </ItemGroup>
-
-
-  <ItemGroup>
     <!-- Test projects exercise internal slice types directly (validators, mappers are internal sealed). -->
     <InternalsVisibleTo Include="NetForge.Tests.Unit" />
     <InternalsVisibleTo Include="NetForge.Tests.Integration" />
   </ItemGroup>
+
+  <!-- Vite output is prepared and committed under wwwroot; the JavaScript .esproj remains in the
+       solution for development but is intentionally not a server ProjectReference or publish input. -->
 
   <!-- SQL Server migrations live in a separate assembly so they never run against SQLite. The child
        migrations build references this project; the guard prevents that reference build recursing. -->
