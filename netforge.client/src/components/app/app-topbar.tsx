@@ -1,0 +1,55 @@
+import { type ReactNode } from 'react';
+
+import { ModeToggle } from '@/components/mode-toggle';
+import { LanguageToggle } from '@/components/language-toggle';
+import { UserMenu } from '@/components/app/user-menu';
+import { Separator } from '@/components/ui/separator';
+import { SidebarTrigger } from '@/components/ui/sidebar';
+
+// App top bar (inside <SidebarInset>): the sidebar collapse toggle, an optional tenant switcher, a
+// prominent centred command palette (the multi-purpose search), and the theme/notifications/account
+// controls. The mobile nav drawer is the sidebar's own off-canvas sheet, opened by the same trigger.
+export function AppTopbar() {
+  // Optional topbar pieces — built in TS so the JSX needs no build-time conditional.
+  let whatsNew: ReactNode = null;
+
+  let commandPalette: ReactNode = null;
+
+  let notificationBell: ReactNode = null;
+
+  let tenantSwitcher: ReactNode = null;
+
+  return (
+    <header className="bg-background/80 sticky top-0 z-30 flex h-14 items-center gap-2 border-b px-3 backdrop-blur sm:px-4">
+      <SidebarTrigger className="text-muted-foreground" />
+      <Separator orientation="vertical" className="me-1 hidden h-5 sm:block" />
+
+      {tenantSwitcher}
+
+      {/* Prominent, centred search — the multi-purpose command palette (VS Code-style). */}
+      {/* min-w-9 keeps the collapsed icon-only trigger at its natural size on a phone; without it the
+          flex-1 track shrinks past the button and it spills over the control cluster beside it. The
+          floor is the button's size, so it must be all button: an inset here would come out of the
+          trigger (a 28px runt beside 36px controls), not out of the header, which on a 320px phone is
+          already spent to the pixel. The track is also the query container the trigger reads to know
+          it has collapsed (command-palette.tsx). */}
+      <div className="@container flex min-w-9 flex-1 justify-center sm:px-2">
+        <span data-tour="command" className="w-full max-w-md">
+          {commandPalette}
+        </span>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
+        {whatsNew}
+        {notificationBell}
+        <LanguageToggle />
+        <span data-tour="theme" className="flex items-center">
+          <ModeToggle />
+        </span>
+        <span data-tour="account" className="flex items-center">
+          <UserMenu />
+        </span>
+      </div>
+    </header>
+  );
+}
