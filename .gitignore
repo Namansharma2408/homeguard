@@ -376,3 +376,44 @@ App_Data/
 
 # Project temporary files
 stuff/
+
+
+
+# .NET build artifacts
+**/bin/
+**/obj/
+**/out/
+**/publish/
+
+# NuGet
+**/packages/
+*.nupkg
+
+# Node
+**/node_modules/
+**/dist/
+**/.vite/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# IDE files
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# OS files
+.DS_Store
+Thumbs.db
