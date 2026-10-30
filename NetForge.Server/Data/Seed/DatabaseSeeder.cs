@@ -13,8 +13,9 @@ public static class DatabaseSeeder
     public static async Task SeedAsync(IServiceProvider services, IConfiguration config, IHostEnvironment env)
     {
         var db = services.GetRequiredService<AppDbContext>();
-        // SQLite ships migrations (full history); the server providers create the schema from the model.
-        if (db.Database.IsSqlite()) db.Database.Migrate();
+        // SQLite and SQL Server each have provider-specific migration histories; keep their migrations
+        // isolated so provider-generated operations are never mixed.
+        if (db.Database.IsSqlite() || db.Database.IsSqlServer()) db.Database.Migrate();
         else db.Database.EnsureCreated();
 
         // Seeding is a machine write, not a user action: without this the trail opens with hundreds of

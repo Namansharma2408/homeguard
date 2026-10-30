@@ -15,7 +15,7 @@ monitor property health, identify potential risks, manage incidents, and organiz
 ## Stack
 
 ASP.NET Core 10, C#, EF Core 10, React 19, TypeScript, Vite, Tailwind CSS 4, shadcn/ui,
-PostgreSQL/SQLite, TanStack Query, Zustand.
+SQL Server/PostgreSQL/SQLite, TanStack Query, Zustand.
 
 ## Prerequisites
 
@@ -75,3 +75,6 @@ Scalar UI: http://localhost:5000/scalar (development)
 ## Licensing
 
 MIT. Builds upon NetForge Community; see THIRD_PARTY_NOTICES.md and LICENSE.
+## Deployment
+
+See [MonsterASP.NET single-site deployment](docs/deployment/monsterasp.md) for the combined React, ASP.NET Core 10, and SQL Server setup.

@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
@@ -26,6 +27,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.8" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.8" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.8">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -60,12 +62,27 @@
   </ItemGroup>
 
 
-
-
   <ItemGroup>
     <!-- Test projects exercise internal slice types directly (validators, mappers are internal sealed). -->
     <InternalsVisibleTo Include="NetForge.Tests.Unit" />
     <InternalsVisibleTo Include="NetForge.Tests.Integration" />
   </ItemGroup>
+
+  <!-- SQL Server migrations live in a separate assembly so they never run against SQLite. The child
+       migrations build references this project; the guard prevents that reference build recursing. -->
+  <Target Name="BuildSqlServerMigrations" AfterTargets="Build"
+          Condition="'$(SkipSqlServerMigrationsBuild)' != 'true'">
+    <MSBuild Projects="$(MSBuildProjectDirectory)\..\NetForge.Server.SqlServerMigrations\NetForge.Server.SqlServerMigrations.csproj"
+             Targets="Restore;Build"
+             Properties="Configuration=$(Configuration);SkipSqlServerMigrationsBuild=true" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\NetForge.Server.SqlServerMigrations\bin\$(Configuration)\net10.0\NetForge.Server.SqlServerMigrations.dll"
+          DestinationFolder="$(TargetDir)" />
+  </Target>
+
+  <Target Name="CopySqlServerMigrationsToPublish" AfterTargets="Publish"
+          Condition="Exists('$(TargetDir)NetForge.Server.SqlServerMigrations.dll')">
+    <Copy SourceFiles="$(TargetDir)NetForge.Server.SqlServerMigrations.dll"
+          DestinationFolder="$(PublishDir)" />
+  </Target>
 
 </Project>

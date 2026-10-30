@@ -1,3 +1,4 @@
+using System.Runtime.Loader;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using NetForge.Server.Data;
@@ -22,17 +23,37 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddPlatform(builder.Configuration);
 
+var databaseProvider = (builder.Configuration["Database:Provider"] ?? "sqlite").Trim().ToLowerInvariant();
+
+// The SQL Server migrations project is a separate assembly so its provider-specific operations stay
+// isolated from SQLite. It is copied beside the app during publish and loaded by path because this
+// runtime-only dependency is intentionally not a compile-time ProjectReference.
+if (databaseProvider == "sqlserver")
+{
+    var migrationsPath = Path.Combine(AppContext.BaseDirectory, "NetForge.Server.SqlServerMigrations.dll");
+    if (File.Exists(migrationsPath))
+        AssemblyLoadContext.Default.LoadFromAssemblyPath(migrationsPath);
+}
+
 builder.Services.AddDbContext<AppDbContext>((serviceProvider, options) =>
 {
     var connectionString = builder.Configuration.GetConnectionString("Default");
-    // The active provider is config-driven (Database:Provider) so one build runs on any of the three, and a
-    // dev/prod split is just a different value per environment. SQLite is the default. The model itself is
+    // The active provider is config-driven (Database:Provider), so local and production environments can
+    // select different providers from configuration. SQLite is the default. The model itself is
     // provider-agnostic — the SQLite-only value converters in AppDbContext are gated on Database.IsSqlite().
-    switch ((builder.Configuration["Database:Provider"] ?? "sqlite").Trim().ToLowerInvariant())
+    // NOTE: When deploying to production with SQL Server, the SQLite-specific value converters (DateTimeOffset
+    // ticks, decimal cents) are omitted because SQL Server natively supports these types.
+    switch (databaseProvider)
     {
-        default:
+        case "sqlite":
             options.UseSqlite(connectionString);
             break;
+        case "sqlserver":
+            options.UseSqlServer(connectionString, sql =>
+                sql.MigrationsAssembly("NetForge.Server.SqlServerMigrations"));
+            break;
+        default:
+            throw new InvalidOperationException($"Unsupported Database:Provider '{databaseProvider}'.");
     }
     options.ConfigureWarnings(w => w
         // The model scan deliberately excludes _Template, so until the first real slice
@@ -48,9 +69,11 @@ builder.Services.AddDbContext<AppDbContext>((serviceProvider, options) =>
     // (single-tenant mode stamps "default").
     options.AddInterceptors(serviceProvider.GetRequiredService<TenantInterceptor>());
 });
-
-// SQLite creates the file but not its parent directory.
-Directory.CreateDirectory(Path.Combine(builder.Environment.ContentRootPath, "App_Data"));
+// SQLite creates the file but not its parent directory; server providers don't need App_Data.
+if (databaseProvider == "sqlite")
+{
+    Directory.CreateDirectory(Path.Combine(builder.Environment.ContentRootPath, "App_Data"));
+}
 
 var app = builder.Build();
 
@@ -63,8 +86,7 @@ try
 {
     using var scope = app.Services.CreateScope();
     // Migrate + seed via the shared seeder (Data/Seed/DatabaseSeeder) so app boot and the demo factory-reset
-    // stay in lockstep. Add migrations for a server provider with `dotnet ef migrations add` when you want
-    // versioned schema there — see the database notes in USER_GUIDE.
+    // stay in lockstep. SQLite and SQL Server have separate migration assemblies.
     await DatabaseSeeder.SeedAsync(scope.ServiceProvider, app.Configuration, app.Environment);
 }
 catch (Exception ex)
@@ -100,7 +122,28 @@ app.MapAllFeatures();
 app.MapPlatformHealthChecks();
 
 
-app.MapFallbackToFile("/index.html");
+// Existing API and backend endpoints win normal endpoint routing. This last-resort SPA handler serves
+// extensionless client routes only; unknown backend paths keep a 404 instead of receiving index.html.
+app.MapFallback(async (HttpContext context, IWebHostEnvironment environment) =>
+{
+    if (HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method))
+    {
+        var path = context.Request.Path;
+        var backendPrefixes = new[]
+        {
+            "/api", "/scalar", "/openapi", "/health", "/hubs", "/hangfire", "/swagger"
+        };
+        if (!backendPrefixes.Any(prefix => path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase)))
+        {
+            context.Response.ContentType = "text/html; charset=utf-8";
+            var webRoot = environment.WebRootPath ?? Path.Combine(environment.ContentRootPath, "wwwroot");
+            await context.Response.SendFileAsync(Path.Combine(webRoot, "index.html"));
+            return;
+        }
+    }
+
+    context.Response.StatusCode = StatusCodes.Status404NotFound;
+}).ExcludeFromDescription();
 
 app.Run();
 
